@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Supermarket POS</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body { margin:0; font-family:sans-serif; background:#0f172a; color:#fff; }
+.container { max-width:1200px; margin:auto; padding:20px; }
+h1 { text-align:center; }
+.layout { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.card { background:#1e293b; padding:20px; border-radius:12px; }
+input, select { width:100%; padding:10px; margin:5px 0; border-radius:8px; border:none; }
+button { padding:10px; border:none; border-radius:8px; cursor:pointer; }
+.add { background:#22c55e; color:#fff; }
+.delete { background:#ef4444; color:#fff; }
+.pay { background:#3b82f6; color:#fff; width:100%; }
+table { width:100%; margin-top:10px; border-collapse:collapse; }
+th, td { padding:10px; border-bottom:1px solid #444; text-align:center; }
+.total { color:#22c55e; font-size:20px; }
+#reader { width:100%; }
+</style>
+</head>
+
+<body>
+<div class="container">
+<h1>🛒 Smart POS Billing System</h1>
+
+<div class="layout">
+
+<div class="card">
+<h3>Scan / Add Product</h3>
+<div id="reader"></div>
+<input id="productName" placeholder="Product">
+<input id="productPrice" type="number" placeholder="Price">
+<input id="productQty" type="number" placeholder="Qty">
+<button class="add" onclick="addItem()">Add</button>
+</div>
+
+<div class="card">
+<h3>Bill</h3>
+<p>Bill No: <span id="billNo"></span></p>
+<p>Date: <span id="date"></span></p>
+
+<table>
+<thead>
+<tr><th>Item</th><th>Price</th><th>Qty</th><th>Total</th><th></th></tr>
+</thead>
+<tbody id="billTable"></tbody>
+</table>
+
+<p>Subtotal: ₹<span id="subtotal">0</span></p>
+<p>GST: ₹<span id="gst">0</span></p>
+<p class="total">Total: ₹<span id="total">0</span></p>
+
+<h3>Payment</h3>
+<select id="paymentMethod">
+<option>Cash</option>
+<option>UPI</option>
+<option>Card</option>
+</select>
+<button class="pay" onclick="completePayment()">Complete Payment</button>
+</div>
+
+</div>
+
+<div class="card">
+<h3>Sales Analytics</h3>
+<p>Total Orders: <span id="orders">0</span></p>
+<p>Total Revenue: ₹<span id="revenue">0</span></p>
+</div>
+
+</div>
+
+<script>
+let items=[];
+let orderCount=0;
+let revenue=0;
+
+// Fake API simulation
+async function fetchProduct(barcode){
+  let res = await fetch("http://127.0.0.1:5000/product/" + barcode);
+  if(res.ok){
+    return await res.json();
+  }
+  return null;
+}
+
+function addItem(){
+  let name=productName.value;
+  let price=parseFloat(productPrice.value);
+  let qty=parseInt(productQty.value);
+
+  if(!name||!price||!qty) return alert("Fill all");
+
+  items.push({name,price,qty});
+  render();
+
+  productName.value="";
+  productPrice.value="";
+  productQty.value="";
+}
+
+function render(){
+  billTable.innerHTML="";
+  let sub=0;
+
+  items.forEach((it,i)=>{
+    let t=it.price*it.qty;
+    sub+=t;
+    billTable.innerHTML+=`<tr>
+    <td>${it.name}</td>
+    <td>${it.price}</td>
+    <td>${it.qty}</td>
+    <td>${t}</td>
+    <td><button class='delete' onclick='removeItem(${i})'>X</button></td>
+    </tr>`;
+  });
+
+  let gst=sub*0.05;
+  let total=sub+gst;
+
+  subtotal.innerText=sub;
+  gstEl=document.getElementById('gst');
+  gstEl.innerText=gst;
+  totalEl=document.getElementById('total');
+  totalEl.innerText=total;
+}
+
+function removeItem(i){ items.splice(i,1); render(); }
+
+function completePayment(){
+  let total=parseFloat(document.getElementById('total').innerText);
+  orderCount++;
+  revenue+=total;
+
+  document.getElementById('orders').innerText=orderCount;
+  document.getElementById('revenue').innerText=revenue.toFixed(2);
+
+  alert("Payment Successful via "+paymentMethod.value);
+
+  items=[];
+  render();
+  generateBill();
+}
+
+function generateBill(){
+  document.getElementById('billNo').innerText=Math.floor(Math.random()*100000);
+  document.getElementById('date').innerText=new Date().toLocaleString();
+}
+
+// Barcode
+function startScanner(){
+  const qr=new Html5Qrcode("reader");
+  qr.start({facingMode:"environment"},{fps:10,qrbox:250},async(code)=>{
+    let p=await fetchProduct(code);
+    if(p){
+      productName.value=p.name;
+      productPrice.value=p.price;
+      productQty.value=1;
+    }
+  });
+}
+
+window.onload=()=>{
+  generateBill();
+  startScanner();
+};
+</script>
+</body>
+</html>

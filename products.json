@@ -1,0 +1,7 @@
+{
+  "8901234567890": { "name": "Milk", "price": 50 },
+  "8909876543210": { "name": "Bread", "price": 30 },
+  "8901111111111": { "name": "Chips", "price": 20 },
+  "8902222222222": { "name": "Chocolate", "price": 60 },
+  "8903333333333": { "name": "Biscuit", "price": 40 }
+}
